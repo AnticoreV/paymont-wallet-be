@@ -130,12 +130,8 @@ components:
     CreateWalletRequest:
       type: object
       required:
-        - userId
         - currency
       properties:
-        userId:
-          type: string
-          format: uuid
         currency:
           $ref: '#/components/schemas/Currency'
 
@@ -143,9 +139,6 @@ components:
       type: object
       properties:
         walletId:
-          type: string
-          format: uuid
-        userId:
           type: string
           format: uuid
         currency:
