@@ -1,5 +1,6 @@
 package com.paymontwalletbe.mapper;
 
+import com.paymont.wallet.api.model.BalanceResponse;
 import com.paymont.wallet.api.model.Currency;
 import com.paymont.wallet.api.model.WalletResponse;
 import com.paymontwalletbe.model.entities.Wallet;
@@ -16,6 +17,8 @@ public interface WalletMapper {
 
     @Mapping(target = "walletId", source = "id")
     WalletResponse toResponse(Wallet wallet);
+
+    BalanceResponse toBalanceResponse(Wallet wallet);
 
     default Currency mapCurrency(CurrencyType currencyType) {
         return Currency.valueOf(currencyType.name());

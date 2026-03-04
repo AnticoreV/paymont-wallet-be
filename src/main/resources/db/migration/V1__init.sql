@@ -25,8 +25,8 @@ CREATE TABLE transaction_entries
 CREATE TABLE transactions
 (
     id               UUID                        NOT NULL,
-    type             TRANSACTION_TYPE            NOT NULL,
-    status           TRANSACTION_STATUS          NOT NULL,
+    type             VARCHAR(20)                 NOT NULL,
+    status           VARCHAR(20)                 NOT NULL,
     description      VARCHAR(255),
     reference_number VARCHAR(255),
     created_at       TIMESTAMP WITHOUT TIME ZONE NOT NULL,

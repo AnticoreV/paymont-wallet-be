@@ -27,21 +27,21 @@ public class WalletController implements WalletsApi {
 
     @Override
     public ResponseEntity<BalanceResponse> getBalance(UUID walletId) {
-        return WalletsApi.super.getBalance(walletId);
+        return ResponseEntity.ok(walletService.getBalance(walletId));
     }
 
     @Override
     public ResponseEntity<List<TransactionResponse>> getTransactions(UUID walletId) {
-        return WalletsApi.super.getTransactions(walletId);
+        return ResponseEntity.ok(walletService.getTransactions(walletId));
     }
 
     @Override
-    public ResponseEntity<TransactionResponse> topUp(UUID walletId, TopUpRequest topUpRequest) {
-        return WalletsApi.super.topUp(walletId, topUpRequest);
+    public ResponseEntity<TransactionResponse> topUp(UUID walletId, TopUpRequest request) {
+        return ResponseEntity.ok(walletService.topUp(walletId, request));
     }
 
     @Override
-    public ResponseEntity<TransactionResponse> withdraw(UUID walletId, WithdrawRequest withdrawRequest) {
-        return WalletsApi.super.withdraw(walletId, withdrawRequest);
+    public ResponseEntity<TransactionResponse> withdraw(UUID walletId, WithdrawRequest request) {
+        return ResponseEntity.ok(walletService.withdraw(walletId, request));
     }
 }
