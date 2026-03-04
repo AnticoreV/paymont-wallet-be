@@ -2,6 +2,8 @@ package com.paymontwalletbe.controllers;
 
 import com.paymont.wallet.api.WalletsApi;
 import com.paymont.wallet.api.model.*;
+import com.paymontwalletbe.service.WalletService;
+import lombok.AllArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -9,11 +11,18 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
+@AllArgsConstructor
 public class WalletController implements WalletsApi {
 
+    private final WalletService walletService;
+
     @Override
-    public ResponseEntity<WalletResponse> createWallet(CreateWalletRequest createWalletRequest) {
-        return WalletsApi.super.createWallet(createWalletRequest);
+    public ResponseEntity<WalletResponse> createWallet(CreateWalletRequest request) {
+
+        WalletResponse response =
+                walletService.createWallet(request.getCurrency());
+
+        return ResponseEntity.status(201).body(response);
     }
 
     @Override

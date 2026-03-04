@@ -47,7 +47,7 @@ CREATE TABLE wallets
 (
     id         UUID                        NOT NULL,
     user_id    UUID                        NOT NULL,
-    currency   CURRENCY_TYPE               NOT NULL,
+    currency   VARCHAR(3)                  NOT NULL,
     created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL,
     CONSTRAINT pk_wallets PRIMARY KEY (id)
 );
