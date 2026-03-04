@@ -1,9 +1,210 @@
 openapi: 3.1.0
 info:
-  title: $Title$
-  description: $Title$
+  title: Wallet API
+  description: Virtual wallet supporting EUR and CZK
   version: 1.0.0
+
 servers:
-  - url: '$https$'
+  - url: http://localhost:8080/api
+
 paths:
-  $END$
+
+  /wallets:
+    post:
+      summary: Create wallet
+      operationId: createWallet
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWalletRequest'
+      responses:
+        '201':
+          description: Wallet created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WalletResponse'
+
+  /wallets/{walletId}/balance:
+    get:
+      summary: Get wallet balance
+      operationId: getBalance
+      parameters:
+        - name: walletId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Current balance
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BalanceResponse'
+
+  /wallets/{walletId}/top-up:
+    post:
+      summary: Top up wallet
+      operationId: topUp
+      parameters:
+        - name: walletId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TopUpRequest'
+      responses:
+        '200':
+          description: Transaction completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionResponse'
+
+  /wallets/{walletId}/withdraw:
+    post:
+      summary: Withdraw funds
+      operationId: withdraw
+      parameters:
+        - name: walletId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WithdrawRequest'
+      responses:
+        '200':
+          description: Withdrawal completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionResponse'
+
+  /wallets/{walletId}/transactions:
+    get:
+      summary: Get wallet transaction history
+      operationId: getTransactions
+      parameters:
+        - name: walletId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: List of transactions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TransactionResponse'
+
+components:
+
+  schemas:
+
+    Currency:
+      type: string
+      enum:
+        - EUR
+        - CZK
+
+    CreateWalletRequest:
+      type: object
+      required:
+        - currency
+      properties:
+        currency:
+          $ref: '#/components/schemas/Currency'
+
+    WalletResponse:
+      type: object
+      properties:
+        walletId:
+          type: string
+          format: uuid
+        currency:
+          $ref: '#/components/schemas/Currency'
+        createdAt:
+          type: string
+          format: date-time
+
+    BalanceResponse:
+      type: object
+      properties:
+        walletId:
+          type: string
+          format: uuid
+        balance:
+          type: number
+          format: double
+        currency:
+          $ref: '#/components/schemas/Currency'
+
+    TopUpRequest:
+      type: object
+      required:
+        - amount
+      properties:
+        amount:
+          type: number
+          format: double
+          minimum: 0.01
+        description:
+          type: string
+
+    WithdrawRequest:
+      type: object
+      required:
+        - amount
+        - targetAccount
+      properties:
+        amount:
+          type: number
+          format: double
+          minimum: 0.01
+        targetAccount:
+          type: string
+        description:
+          type: string
+
+    TransactionResponse:
+      type: object
+      properties:
+        transactionId:
+          type: string
+          format: uuid
+        walletId:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum:
+            - TOP_UP
+            - WITHDRAWAL
+        amount:
+          type: number
+          format: double
+        status:
+          type: string
+        createdAt:
+          type: string
+          format: date-time

@@ -2,10 +2,11 @@ plugins {
     id 'java'
     id 'org.springframework.boot' version '4.0.3'
     id 'io.spring.dependency-management' version '1.1.7'
+    id "org.openapi.generator" version "7.5.0"
 }
 
 group = 'com'
-version = '0.0.1-SNAPSHOT'
+version = '1.0.0'
 description = 'paymont-wallet-be'
 
 java {
@@ -25,17 +26,58 @@ repositories {
 }
 
 dependencies {
+    // ===== SPRING =====
+    implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-security'
-    implementation 'org.springframework.boot:spring-boot-starter-webmvc'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'org.springframework.boot:spring-boot-starter-flyway'
+
+    // ===== DATABASE =====
+    runtimeOnly 'org.postgresql:postgresql'
+    implementation 'org.flywaydb:flyway-core'
+    implementation 'org.flywaydb:flyway-database-postgresql'
+
+    // ===== OPENAPI =====
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.5.0'
+    implementation 'org.openapitools:jackson-databind-nullable:0.2.6'
+
+    // ===== MAPSTRUCT =====
+    implementation 'org.mapstruct:mapstruct:1.5.5.Final'
+    annotationProcessor 'org.mapstruct:mapstruct-processor:1.5.5.Final'
+
+    // ===== LOMBOK =====
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
-    testImplementation 'org.springframework.boot:spring-boot-starter-data-jpa-test'
-    testImplementation 'org.springframework.boot:spring-boot-starter-security-test'
-    testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
+
+    // ===== TEST =====
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.security:spring-security-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
 tasks.named('test') {
     useJUnitPlatform()
 }
+
+tasks.named("compileJava") {
+    dependsOn tasks.named("openApiGenerate")
+}
+
+openApiGenerate {
+    generatorName = "spring"
+    inputSpec = "$rootDir/src/main/resources/wallet-api.yaml"
+    outputDir = layout.buildDirectory.dir("generated").map { it.asFile.path }
+    apiPackage = "com.paymont.wallet.api"
+    modelPackage = "com.paymont.wallet.api.model"
+    invokerPackage = "com.paymont.wallet.api.invoker"
+
+    configOptions = [
+            interfaceOnly : "true",
+            useSpringBoot3: "true",
+            useJakartaEe  : "true",
+            dateLibrary   : "java8"
+    ]
+}
+
+sourceSets.main.java.srcDir(layout.buildDirectory.dir("generated/src/main/java").map { it.asFile.path })

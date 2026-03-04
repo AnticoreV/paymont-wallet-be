@@ -1,1 +1,33 @@
+version: '3.9'
+
 services:
+
+  postgres:
+    image: postgres:18-alpine
+    container_name: wallet-postgres-db
+    environment:
+      POSTGRES_DB: wallet
+      POSTGRES_USER: wallet_user
+      POSTGRES_PASSWORD: wallet_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  wallet-app:
+    build: .
+    container_name: wallet-app
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/wallet
+      SPRING_DATASOURCE_USERNAME: wallet_user
+      SPRING_DATASOURCE_PASSWORD: wallet_pass
+      SPRING_JPA_HIBERNATE_DDL_AUTO: validate
+      SPRING_FLYWAY_ENABLED: true
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
