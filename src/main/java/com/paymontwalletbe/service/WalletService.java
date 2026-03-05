@@ -3,16 +3,14 @@ package com.paymontwalletbe.service;
 import com.paymont.wallet.api.model.*;
 import com.paymontwalletbe.mapper.TransactionMapper;
 import com.paymontwalletbe.mapper.WalletMapper;
-import com.paymontwalletbe.model.entities.Transaction;
-import com.paymontwalletbe.model.entities.TransactionEntry;
-import com.paymontwalletbe.model.entities.User;
-import com.paymontwalletbe.model.entities.Wallet;
+import com.paymontwalletbe.model.entities.*;
 import com.paymontwalletbe.model.entities.enums.CurrencyType;
 import com.paymontwalletbe.model.entities.enums.TransactionStatus;
 import com.paymontwalletbe.model.entities.enums.TransactionType;
 import com.paymontwalletbe.repository.TransactionEntryRepository;
 import com.paymontwalletbe.repository.TransactionRepository;
 import com.paymontwalletbe.repository.WalletRepository;
+import com.paymontwalletbe.repository.WalletSnapshotRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +27,7 @@ public class WalletService {
     private final WalletRepository walletRepository;
     private final TransactionEntryRepository transactionEntryRepository;
     private final TransactionRepository transactionRepository;
+    private final WalletSnapshotRepository walletSnapshotRepository;
     private final WalletMapper walletMapper;
     private final TransactionMapper transactionMapper;
     private final CurrentUserService currentUserService;
@@ -58,14 +57,25 @@ public class WalletService {
 
     @Transactional(readOnly = true)
     public BalanceResponse getBalance(UUID walletId) {
-
         User currentUser = currentUserService.getCurrentUser();
 
         Wallet wallet = walletRepository
                 .findByIdAndUserId(walletId, currentUser.getId())
                 .orElseThrow(() -> new IllegalArgumentException("Wallet not found"));
 
-        return walletMapper.toBalanceResponse(wallet);
+        WalletSnapshot snapshot = walletSnapshotRepository.findByWalletId(walletId)
+                .orElse(null);
+
+        BigDecimal balance;
+
+        if (snapshot != null) {
+            BigDecimal delta = transactionEntryRepository.sumSinceEntry(walletId, snapshot.getLastEntryId());
+            balance = snapshot.getBalance().add(delta);
+        } else {
+            balance = transactionEntryRepository.sumAll(walletId);
+        }
+
+        return walletMapper.toBalanceResponse(wallet, balance);
     }
 
     @Transactional(readOnly = true)
