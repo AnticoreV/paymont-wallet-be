@@ -74,10 +74,7 @@ public class WalletService {
         User currentUser = currentUserService.getCurrentUser();
 
         return transactionEntryRepository
-                .findAllByWalletIdAndWalletUserIdOrderByCreatedAtDesc(
-                        walletId,
-                        currentUser.getId()
-                )
+                .findEntriesWithTransaction(walletId, currentUser.getId())
                 .stream()
                 .map(transactionMapper::toResponse)
                 .toList();

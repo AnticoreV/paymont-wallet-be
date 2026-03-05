@@ -16,8 +16,14 @@ public interface TransactionEntryRepository extends JpaRepository<TransactionEnt
             """)
     BigDecimal calculateBalance(UUID walletId);
 
-    List<TransactionEntry> findAllByWalletIdAndWalletUserIdOrderByCreatedAtDesc(
-            UUID walletId,
-            UUID userId
-    );
+    @Query("""
+                SELECT e
+                FROM TransactionEntry e
+                JOIN FETCH e.transaction t
+                JOIN FETCH e.wallet w
+                WHERE w.id = :walletId
+                AND w.user.id = :userId
+                ORDER BY e.createdAt DESC
+            """)
+    List<TransactionEntry> findEntriesWithTransaction(UUID walletId, UUID userId);
 }
