@@ -1,6 +1,10 @@
 package com.paymontwalletbe.service;
 
 import com.paymont.wallet.api.model.*;
+import com.paymontwalletbe.exception.BadRequestException;
+import com.paymontwalletbe.exception.InsufficientFundsException;
+import com.paymontwalletbe.exception.WalletAlreadyExistsException;
+import com.paymontwalletbe.exception.WalletNotFoundException;
 import com.paymontwalletbe.mapper.TransactionMapper;
 import com.paymontwalletbe.mapper.WalletMapper;
 import com.paymontwalletbe.model.entities.*;
@@ -41,7 +45,9 @@ public class WalletService {
 
         walletRepository.findByUserAndCurrency(user, currency)
                 .ifPresent(w -> {
-                    throw new IllegalStateException("Wallet already exists for this currency");
+                    throw new WalletAlreadyExistsException(
+                            "Wallet already exists for currency: " + currency
+                    );
                 });
 
         Wallet wallet = Wallet.builder()
@@ -62,7 +68,7 @@ public class WalletService {
 
         Wallet wallet = walletRepository
                 .findByIdAndUserId(walletId, currentUser.getId())
-                .orElseThrow(() -> new IllegalArgumentException("Wallet not found"));
+                .orElseThrow(() -> new WalletNotFoundException("Wallet not found: " + walletId));
 
         return walletMapper.toResponse(wallet);
     }
@@ -84,7 +90,7 @@ public class WalletService {
 
         Wallet wallet = walletRepository
                 .findByIdAndUserId(walletId, currentUser.getId())
-                .orElseThrow(() -> new IllegalArgumentException("Wallet not found"));
+                .orElseThrow(() -> new WalletNotFoundException("Wallet not found: " + walletId));
 
         // Currently always null, snapshot logic not implemented yet
         WalletSnapshot snapshot = walletSnapshotRepository.findByWalletId(walletId)
@@ -121,12 +127,12 @@ public class WalletService {
 
         Wallet wallet = walletRepository
                 .findByIdAndUserIdForUpdate(walletId, currentUser.getId())
-                .orElseThrow(() -> new IllegalArgumentException("Wallet not found"));
+                .orElseThrow(() -> new WalletNotFoundException("Wallet not found: " + walletId));
 
         BigDecimal amount = BigDecimal.valueOf(request.getAmount());
 
         if (amount.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("Amount must be positive");
+            throw new BadRequestException("Amount must be positive");
         }
 
         Instant now = Instant.now();
@@ -160,19 +166,18 @@ public class WalletService {
 
         Wallet wallet = walletRepository
                 .findByIdAndUserIdForUpdate(walletId, currentUser.getId())
-                .orElseThrow(() -> new IllegalArgumentException("Wallet not found"));
+                .orElseThrow(() -> new WalletNotFoundException("Wallet not found: " + walletId));
 
         BigDecimal amount = BigDecimal.valueOf(request.getAmount());
 
         if (amount.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("Amount must be positive");
+            throw new BadRequestException("Amount must be positive");
         }
 
-        BigDecimal currentBalance =
-                transactionEntryRepository.calculateBalance(walletId);
+        BigDecimal currentBalance = transactionEntryRepository.calculateBalance(walletId);
 
         if (currentBalance.compareTo(amount) < 0) {
-            throw new IllegalStateException("Insufficient funds");
+            throw new InsufficientFundsException("Insufficient funds");
         }
 
         Instant now = Instant.now();
