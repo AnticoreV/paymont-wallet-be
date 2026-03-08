@@ -26,6 +26,16 @@ public class WalletController implements WalletsApi {
     }
 
     @Override
+    public ResponseEntity<WalletResponse> getWallet(UUID walletId) {
+        return ResponseEntity.ok(walletService.getWallet(walletId));
+    }
+
+    @Override
+    public ResponseEntity<List<WalletResponse>> getWallets() {
+        return ResponseEntity.ok(walletService.getWallets());
+    }
+
+    @Override
     public ResponseEntity<BalanceResponse> getBalance(UUID walletId) {
         return ResponseEntity.ok(walletService.getBalance(walletId));
     }

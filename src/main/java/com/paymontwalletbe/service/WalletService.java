@@ -56,6 +56,29 @@ public class WalletService {
     }
 
     @Transactional(readOnly = true)
+    public WalletResponse getWallet(UUID walletId) {
+
+        User currentUser = currentUserService.getCurrentUser();
+
+        Wallet wallet = walletRepository
+                .findByIdAndUserId(walletId, currentUser.getId())
+                .orElseThrow(() -> new IllegalArgumentException("Wallet not found"));
+
+        return walletMapper.toResponse(wallet);
+    }
+
+    @Transactional(readOnly = true)
+    public List<WalletResponse> getWallets() {
+
+        User currentUser = currentUserService.getCurrentUser();
+
+        return walletRepository.findAllByUserId(currentUser.getId())
+                .stream()
+                .map(walletMapper::toResponse)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
     public BalanceResponse getBalance(UUID walletId) {
         User currentUser = currentUserService.getCurrentUser();
 
