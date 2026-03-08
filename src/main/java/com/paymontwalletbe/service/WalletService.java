@@ -63,6 +63,7 @@ public class WalletService {
                 .findByIdAndUserId(walletId, currentUser.getId())
                 .orElseThrow(() -> new IllegalArgumentException("Wallet not found"));
 
+        // Currently always null, snapshot logic not implemented yet
         WalletSnapshot snapshot = walletSnapshotRepository.findByWalletId(walletId)
                 .orElse(null);
 
@@ -72,7 +73,7 @@ public class WalletService {
             BigDecimal delta = transactionEntryRepository.sumSinceEntry(walletId, snapshot.getLastEntryId());
             balance = snapshot.getBalance().add(delta);
         } else {
-            balance = transactionEntryRepository.sumAll(walletId);
+            balance = transactionEntryRepository.calculateBalance(walletId);
         }
 
         return walletMapper.toBalanceResponse(wallet, balance);

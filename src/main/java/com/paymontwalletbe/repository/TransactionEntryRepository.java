@@ -7,7 +7,6 @@ import org.springframework.data.repository.query.Param;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 public interface TransactionEntryRepository extends JpaRepository<TransactionEntry, UUID> {
@@ -37,14 +36,5 @@ public interface TransactionEntryRepository extends JpaRepository<TransactionEnt
             """)
     BigDecimal sumSinceEntry(@Param("walletId") UUID walletId,
                              @Param("lastEntryId") UUID lastEntryId);
-
-    @Query("""
-                SELECT COALESCE(SUM(te.amount), 0)
-                FROM TransactionEntry te
-                WHERE te.wallet.id = :walletId
-            """)
-    BigDecimal sumAll(@Param("walletId") UUID walletId);
-
-    Optional<TransactionEntry> findTopByWalletIdOrderByCreatedAtDesc(UUID walletId);
 
 }
