@@ -8,6 +8,7 @@ import com.paymontwalletbe.model.entities.enums.CurrencyType;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -18,10 +19,18 @@ public interface WalletMapper {
     @Mapping(target = "walletId", source = "id")
     WalletResponse toResponse(Wallet wallet);
 
-    BalanceResponse toBalanceResponse(Wallet wallet);
+    @Mapping(target = "walletId", source = "wallet.id")
+    @Mapping(target = "currency", source = "wallet.currency")
+    @Mapping(target = "balance", source = "balance")
+    BalanceResponse toBalanceResponse(Wallet wallet, BigDecimal balance);
+
 
     default Currency mapCurrency(CurrencyType currencyType) {
-        return Currency.valueOf(currencyType.name());
+        return currencyType == null ? null : Currency.valueOf(currencyType.name());
+    }
+
+    default Double map(BigDecimal value) {
+        return value == null ? null : value.doubleValue();
     }
 
     default OffsetDateTime mapInstant(Instant instant) {

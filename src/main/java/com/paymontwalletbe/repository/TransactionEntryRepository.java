@@ -3,6 +3,7 @@ package com.paymontwalletbe.repository;
 import com.paymontwalletbe.model.entities.TransactionEntry;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -16,8 +17,24 @@ public interface TransactionEntryRepository extends JpaRepository<TransactionEnt
             """)
     BigDecimal calculateBalance(UUID walletId);
 
-    List<TransactionEntry> findAllByWalletIdAndWalletUserIdOrderByCreatedAtDesc(
-            UUID walletId,
-            UUID userId
-    );
+    @Query("""
+                SELECT e
+                FROM TransactionEntry e
+                JOIN FETCH e.transaction t
+                JOIN FETCH e.wallet w
+                WHERE w.id = :walletId
+                AND w.user.id = :userId
+                ORDER BY e.createdAt DESC
+            """)
+    List<TransactionEntry> findEntriesWithTransaction(UUID walletId, UUID userId);
+
+    @Query("""
+                SELECT COALESCE(SUM(te.amount), 0)
+                FROM TransactionEntry te
+                WHERE te.wallet.id = :walletId
+                  AND te.id > :lastEntryId
+            """)
+    BigDecimal sumSinceEntry(@Param("walletId") UUID walletId,
+                             @Param("lastEntryId") UUID lastEntryId);
+
 }

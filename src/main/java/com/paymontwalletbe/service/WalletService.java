@@ -1,18 +1,20 @@
 package com.paymontwalletbe.service;
 
 import com.paymont.wallet.api.model.*;
+import com.paymontwalletbe.exception.BadRequestException;
+import com.paymontwalletbe.exception.InsufficientFundsException;
+import com.paymontwalletbe.exception.WalletAlreadyExistsException;
+import com.paymontwalletbe.exception.WalletNotFoundException;
 import com.paymontwalletbe.mapper.TransactionMapper;
 import com.paymontwalletbe.mapper.WalletMapper;
-import com.paymontwalletbe.model.entities.Transaction;
-import com.paymontwalletbe.model.entities.TransactionEntry;
-import com.paymontwalletbe.model.entities.User;
-import com.paymontwalletbe.model.entities.Wallet;
+import com.paymontwalletbe.model.entities.*;
 import com.paymontwalletbe.model.entities.enums.CurrencyType;
 import com.paymontwalletbe.model.entities.enums.TransactionStatus;
 import com.paymontwalletbe.model.entities.enums.TransactionType;
 import com.paymontwalletbe.repository.TransactionEntryRepository;
 import com.paymontwalletbe.repository.TransactionRepository;
 import com.paymontwalletbe.repository.WalletRepository;
+import com.paymontwalletbe.repository.WalletSnapshotRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +31,7 @@ public class WalletService {
     private final WalletRepository walletRepository;
     private final TransactionEntryRepository transactionEntryRepository;
     private final TransactionRepository transactionRepository;
+    private final WalletSnapshotRepository walletSnapshotRepository;
     private final WalletMapper walletMapper;
     private final TransactionMapper transactionMapper;
     private final CurrentUserService currentUserService;
@@ -42,7 +45,9 @@ public class WalletService {
 
         walletRepository.findByUserAndCurrency(user, currency)
                 .ifPresent(w -> {
-                    throw new IllegalStateException("Wallet already exists for this currency");
+                    throw new WalletAlreadyExistsException(
+                            "Wallet already exists for currency: " + currency
+                    );
                 });
 
         Wallet wallet = Wallet.builder()
@@ -57,15 +62,50 @@ public class WalletService {
     }
 
     @Transactional(readOnly = true)
-    public BalanceResponse getBalance(UUID walletId) {
+    public WalletResponse getWallet(UUID walletId) {
 
         User currentUser = currentUserService.getCurrentUser();
 
         Wallet wallet = walletRepository
                 .findByIdAndUserId(walletId, currentUser.getId())
-                .orElseThrow(() -> new IllegalArgumentException("Wallet not found"));
+                .orElseThrow(() -> new WalletNotFoundException("Wallet not found: " + walletId));
 
-        return walletMapper.toBalanceResponse(wallet);
+        return walletMapper.toResponse(wallet);
+    }
+
+    @Transactional(readOnly = true)
+    public List<WalletResponse> getWallets() {
+
+        User currentUser = currentUserService.getCurrentUser();
+
+        return walletRepository.findAllByUserId(currentUser.getId())
+                .stream()
+                .map(walletMapper::toResponse)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public BalanceResponse getBalance(UUID walletId) {
+        User currentUser = currentUserService.getCurrentUser();
+
+        Wallet wallet = walletRepository
+                .findByIdAndUserId(walletId, currentUser.getId())
+                .orElseThrow(() -> new WalletNotFoundException("Wallet not found: " + walletId));
+
+        // Currently always null, snapshot logic not implemented yet
+        WalletSnapshot snapshot = walletSnapshotRepository.findByWalletId(walletId)
+                .orElse(null);
+
+        BigDecimal balance;
+
+        if (snapshot != null) {
+            BigDecimal delta = transactionEntryRepository.sumSinceEntry(walletId, snapshot.getLastEntryId());
+            balance = snapshot.getBalance().add(delta);
+        } else {
+            balance = transactionEntryRepository.calculateBalance(walletId);
+        }
+
+        return walletMapper.toBalanceResponse(wallet, balance);
     }
 
     @Transactional(readOnly = true)
@@ -74,10 +114,7 @@ public class WalletService {
         User currentUser = currentUserService.getCurrentUser();
 
         return transactionEntryRepository
-                .findAllByWalletIdAndWalletUserIdOrderByCreatedAtDesc(
-                        walletId,
-                        currentUser.getId()
-                )
+                .findEntriesWithTransaction(walletId, currentUser.getId())
                 .stream()
                 .map(transactionMapper::toResponse)
                 .toList();
@@ -90,12 +127,12 @@ public class WalletService {
 
         Wallet wallet = walletRepository
                 .findByIdAndUserIdForUpdate(walletId, currentUser.getId())
-                .orElseThrow(() -> new IllegalArgumentException("Wallet not found"));
+                .orElseThrow(() -> new WalletNotFoundException("Wallet not found: " + walletId));
 
         BigDecimal amount = BigDecimal.valueOf(request.getAmount());
 
         if (amount.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("Amount must be positive");
+            throw new BadRequestException("Amount must be positive");
         }
 
         Instant now = Instant.now();
@@ -129,19 +166,18 @@ public class WalletService {
 
         Wallet wallet = walletRepository
                 .findByIdAndUserIdForUpdate(walletId, currentUser.getId())
-                .orElseThrow(() -> new IllegalArgumentException("Wallet not found"));
+                .orElseThrow(() -> new WalletNotFoundException("Wallet not found: " + walletId));
 
         BigDecimal amount = BigDecimal.valueOf(request.getAmount());
 
         if (amount.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("Amount must be positive");
+            throw new BadRequestException("Amount must be positive");
         }
 
-        BigDecimal currentBalance =
-                transactionEntryRepository.calculateBalance(walletId);
+        BigDecimal currentBalance = transactionEntryRepository.calculateBalance(walletId);
 
         if (currentBalance.compareTo(amount) < 0) {
-            throw new IllegalStateException("Insufficient funds");
+            throw new InsufficientFundsException("Insufficient funds");
         }
 
         Instant now = Instant.now();

@@ -1,17 +1,25 @@
 openapi: 3.1.0
 info:
   title: Wallet API
-  description: Virtual wallet supporting EUR and CZK
+  description: API for managing virtual wallets in EUR and CZK, including balance retrieval, top-ups, withdrawals, and transaction history.
   version: 1.0.0
 
 servers:
   - url: http://localhost:8080/api
 
-paths:
+tags:
+  - name: Wallets
+    description: Wallet management operations
+  - name: Transactions
+    description: Wallet transaction operations
 
+paths:
   /wallets:
     post:
+      tags:
+        - Wallets
       summary: Create wallet
+      description: Creates a new wallet for the authenticated user in the requested currency.
       operationId: createWallet
       requestBody:
         required: true
@@ -21,42 +29,119 @@ paths:
               $ref: '#/components/schemas/CreateWalletRequest'
       responses:
         '201':
-          description: Wallet created
+          description: Wallet created successfully
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/WalletResponse'
+        '400':
+          description: Invalid request payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: User is not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Wallet for this currency already exists for the current user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    get:
+      tags:
+        - Wallets
+      summary: Get wallets
+      description: Returns all wallets belonging to the authenticated user.
+      operationId: getWallets
+      responses:
+        '200':
+          description: Wallet list returned successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WalletResponse'
+        '401':
+          description: User is not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /wallets/{walletId}:
+    get:
+      tags:
+        - Wallets
+      summary: Get wallet
+      description: Returns details of a specific wallet belonging to the authenticated user.
+      operationId: getWallet
+      parameters:
+        - $ref: '#/components/parameters/WalletId'
+      responses:
+        '200':
+          description: Wallet details returned successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WalletResponse'
+        '401':
+          description: User is not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Wallet not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /wallets/{walletId}/balance:
     get:
+      tags:
+        - Wallets
       summary: Get wallet balance
+      description: Returns the current balance of a wallet belonging to the authenticated user.
       operationId: getBalance
       parameters:
-        - name: walletId
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
+        - $ref: '#/components/parameters/WalletId'
       responses:
         '200':
-          description: Current balance
+          description: Wallet balance returned successfully
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/BalanceResponse'
+        '401':
+          description: User is not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Wallet not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /wallets/{walletId}/top-up:
     post:
+      tags:
+        - Transactions
       summary: Top up wallet
+      description: Adds funds to the specified wallet.
       operationId: topUp
       parameters:
-        - name: walletId
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
+        - $ref: '#/components/parameters/WalletId'
       requestBody:
         required: true
         content:
@@ -65,23 +150,39 @@ paths:
               $ref: '#/components/schemas/TopUpRequest'
       responses:
         '200':
-          description: Transaction completed
+          description: Top-up completed successfully
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TransactionResponse'
+        '400':
+          description: Invalid request or amount is not positive
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: User is not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Wallet not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /wallets/{walletId}/withdraw:
     post:
+      tags:
+        - Transactions
       summary: Withdraw funds
+      description: Withdraws funds from the specified wallet to a target account.
       operationId: withdraw
       parameters:
-        - name: walletId
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
+        - $ref: '#/components/parameters/WalletId'
       requestBody:
         required: true
         content:
@@ -90,37 +191,79 @@ paths:
               $ref: '#/components/schemas/WithdrawRequest'
       responses:
         '200':
-          description: Withdrawal completed
+          description: Withdrawal completed successfully
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TransactionResponse'
+        '400':
+          description: Invalid request or amount is not positive
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: User is not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Wallet not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Insufficient funds
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /wallets/{walletId}/transactions:
     get:
+      tags:
+        - Transactions
       summary: Get wallet transaction history
+      description: Returns transaction history for the specified wallet.
       operationId: getTransactions
       parameters:
-        - name: walletId
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
+        - $ref: '#/components/parameters/WalletId'
       responses:
         '200':
-          description: List of transactions
+          description: Transaction history returned successfully
           content:
             application/json:
               schema:
                 type: array
                 items:
                   $ref: '#/components/schemas/TransactionResponse'
+        '401':
+          description: User is not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Wallet not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
 components:
+  parameters:
+    WalletId:
+      name: walletId
+      in: path
+      required: true
+      description: Unique identifier of the wallet
+      schema:
+        type: string
+        format: uuid
 
   schemas:
-
     Currency:
       type: string
       enum:
@@ -170,6 +313,7 @@ components:
           minimum: 0.01
         description:
           type: string
+          maxLength: 255
 
     WithdrawRequest:
       type: object
@@ -183,8 +327,10 @@ components:
           minimum: 0.01
         targetAccount:
           type: string
+          maxLength: 255
         description:
           type: string
+          maxLength: 255
 
     TransactionResponse:
       type: object
@@ -205,6 +351,32 @@ components:
           format: double
         status:
           type: string
+          example: COMPLETED
         createdAt:
           type: string
           format: date-time
+
+    ErrorResponse:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          example: 404
+        error:
+          type: string
+          example: Not Found
+        message:
+          type: string
+          example: Wallet not found
+        path:
+          type: string
+          example: /api/wallets/123e4567-e89b-12d3-a456-426614174000
+      required:
+        - timestamp
+        - status
+        - error
+        - message
+        - path
