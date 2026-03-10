@@ -1,4 +1,4 @@
-package com.paymontwalletbe.controllers;
+package com.paymontwalletbe.controller;
 
 import com.paymont.wallet.api.WalletsApi;
 import com.paymont.wallet.api.model.*;

@@ -1,6 +1,10 @@
-package com.paymontwalletbe.exception;
+package com.paymontwalletbe.handler;
 
 import com.paymont.wallet.api.model.ErrorResponse;
+import com.paymontwalletbe.exception.BadRequestException;
+import com.paymontwalletbe.exception.InsufficientFundsException;
+import com.paymontwalletbe.exception.WalletAlreadyExistsException;
+import com.paymontwalletbe.exception.WalletNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
