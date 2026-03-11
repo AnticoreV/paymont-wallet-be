@@ -19,3 +19,11 @@ spring:
 
 server:
   port: 8080
+
+logging:
+  level:
+    root: INFO
+    com.paymontwalletbe: DEBUG
+    org.springframework.security: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] [%X{requestId:-N/A}] %logger{36} - %msg%n"

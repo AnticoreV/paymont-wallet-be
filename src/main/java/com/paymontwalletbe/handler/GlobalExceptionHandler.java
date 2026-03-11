@@ -6,6 +6,7 @@ import com.paymontwalletbe.exception.InsufficientFundsException;
 import com.paymontwalletbe.exception.WalletAlreadyExistsException;
 import com.paymontwalletbe.exception.WalletNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -17,6 +18,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 
 @RestControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(WalletAlreadyExistsException.class)
@@ -24,6 +26,7 @@ public class GlobalExceptionHandler {
             WalletAlreadyExistsException ex,
             HttpServletRequest request
     ) {
+        log.warn("Wallet already exists: path={} message={}", request.getRequestURI(), ex.getMessage());
         return buildErrorResponse(HttpStatus.CONFLICT, ex.getMessage(), request.getRequestURI());
     }
 
@@ -32,6 +35,7 @@ public class GlobalExceptionHandler {
             WalletNotFoundException ex,
             HttpServletRequest request
     ) {
+        log.warn("Wallet not found: path={} message={}", request.getRequestURI(), ex.getMessage());
         return buildErrorResponse(HttpStatus.NOT_FOUND, ex.getMessage(), request.getRequestURI());
     }
 
@@ -40,6 +44,7 @@ public class GlobalExceptionHandler {
             InsufficientFundsException ex,
             HttpServletRequest request
     ) {
+        log.warn("Insufficient funds: path={} message={}", request.getRequestURI(), ex.getMessage());
         return buildErrorResponse(HttpStatus.CONFLICT, ex.getMessage(), request.getRequestURI());
     }
 
@@ -48,6 +53,7 @@ public class GlobalExceptionHandler {
             BadRequestException ex,
             HttpServletRequest request
     ) {
+        log.warn("Bad request: path={} message={}", request.getRequestURI(), ex.getMessage());
         return buildErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request.getRequestURI());
     }
 
@@ -60,6 +66,7 @@ public class GlobalExceptionHandler {
                 .findFirst()
                 .map(error -> error.getField() + " " + error.getDefaultMessage())
                 .orElse("Validation failed");
+        log.warn("Validation failed: path={} message={}", request.getRequestURI(), message);
 
         return buildErrorResponse(HttpStatus.BAD_REQUEST, message, request.getRequestURI());
     }
@@ -69,6 +76,7 @@ public class GlobalExceptionHandler {
             AccessDeniedException ex,
             HttpServletRequest request
     ) {
+        log.warn("Access denied: path={} message={}", request.getRequestURI(), ex.getMessage());
         return buildErrorResponse(HttpStatus.FORBIDDEN, "Access denied", request.getRequestURI());
     }
 
@@ -77,6 +85,7 @@ public class GlobalExceptionHandler {
             Exception ex,
             HttpServletRequest request
     ) {
+        log.error("Unhandled exception: path={}", request.getRequestURI(), ex);
         return buildErrorResponse(
                 HttpStatus.INTERNAL_SERVER_ERROR,
                 "Unexpected internal server error",

@@ -16,6 +16,7 @@ import com.paymontwalletbe.repository.TransactionRepository;
 import com.paymontwalletbe.repository.WalletRepository;
 import com.paymontwalletbe.repository.WalletSnapshotRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +25,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class WalletService {
@@ -40,11 +42,18 @@ public class WalletService {
     public WalletResponse createWallet(Currency currencyApi) {
 
         User user = currentUserService.getCurrentUser();
+        log.debug("Create wallet requested: userId={} currency={}", user.getId(), currencyApi);
 
         CurrencyType currency = CurrencyType.valueOf(currencyApi.getValue());
 
         walletRepository.findByUserAndCurrency(user, currency)
                 .ifPresent(w -> {
+                    log.warn(
+                            "Wallet creation rejected: already exists userId={} currency={} walletId={}",
+                            user.getId(),
+                            currency,
+                            w.getId()
+                    );
                     throw new WalletAlreadyExistsException(
                             "Wallet already exists for currency: " + currency
                     );
@@ -57,6 +66,12 @@ public class WalletService {
                 .build();
 
         walletRepository.save(wallet);
+        log.info(
+                "Wallet created: walletId={} userId={} currency={}",
+                wallet.getId(),
+                user.getId(),
+                currency
+        );
 
         return walletMapper.toResponse(wallet);
     }
@@ -65,6 +80,7 @@ public class WalletService {
     public WalletResponse getWallet(UUID walletId) {
 
         User currentUser = currentUserService.getCurrentUser();
+        log.debug("Get wallet requested: walletId={} userId={}", walletId, currentUser.getId());
 
         Wallet wallet = walletRepository
                 .findByIdAndUserId(walletId, currentUser.getId())
@@ -77,6 +93,7 @@ public class WalletService {
     public List<WalletResponse> getWallets() {
 
         User currentUser = currentUserService.getCurrentUser();
+        log.debug("List wallets requested: userId={}", currentUser.getId());
 
         return walletRepository.findAllByUserId(currentUser.getId())
                 .stream()
@@ -87,6 +104,7 @@ public class WalletService {
     @Transactional(readOnly = true)
     public BalanceResponse getBalance(UUID walletId) {
         User currentUser = currentUserService.getCurrentUser();
+        log.debug("Get balance requested: walletId={} userId={}", walletId, currentUser.getId());
 
         Wallet wallet = walletRepository
                 .findByIdAndUserId(walletId, currentUser.getId())
@@ -105,6 +123,8 @@ public class WalletService {
             balance = transactionEntryRepository.calculateBalance(walletId);
         }
 
+        log.debug("Balance fetched: walletId={} userId={} balance={}", walletId, currentUser.getId(), balance);
+
         return walletMapper.toBalanceResponse(wallet, balance);
     }
 
@@ -112,6 +132,7 @@ public class WalletService {
     public List<TransactionResponse> getTransactions(UUID walletId) {
 
         User currentUser = currentUserService.getCurrentUser();
+        log.debug("List transactions requested: walletId={} userId={}", walletId, currentUser.getId());
 
         return transactionEntryRepository
                 .findEntriesWithTransaction(walletId, currentUser.getId())
@@ -124,6 +145,12 @@ public class WalletService {
     public TransactionResponse topUp(UUID walletId, TopUpRequest request) {
 
         User currentUser = currentUserService.getCurrentUser();
+        log.debug(
+                "Top-up requested: walletId={} userId={} amount={}",
+                walletId,
+                currentUser.getId(),
+                request.getAmount()
+        );
 
         Wallet wallet = walletRepository
                 .findByIdAndUserIdForUpdate(walletId, currentUser.getId())
@@ -132,6 +159,12 @@ public class WalletService {
         BigDecimal amount = BigDecimal.valueOf(request.getAmount());
 
         if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+            log.warn(
+                    "Top-up rejected: non-positive amount walletId={} userId={} amount={}",
+                    walletId,
+                    currentUser.getId(),
+                    amount
+            );
             throw new BadRequestException("Amount must be positive");
         }
 
@@ -155,6 +188,13 @@ public class WalletService {
                 .build();
 
         transactionEntryRepository.save(entry);
+        log.info(
+                "Top-up completed: walletId={} userId={} amount={} currency={}",
+                walletId,
+                currentUser.getId(),
+                amount,
+                wallet.getCurrency()
+        );
 
         return transactionMapper.toResponse(entry);
     }
@@ -163,6 +203,13 @@ public class WalletService {
     public TransactionResponse withdraw(UUID walletId, WithdrawRequest request) {
 
         User currentUser = currentUserService.getCurrentUser();
+        log.debug(
+                "Withdrawal requested: walletId={} userId={} amount={} targetAccount={}",
+                walletId,
+                currentUser.getId(),
+                request.getAmount(),
+                request.getTargetAccount()
+        );
 
         Wallet wallet = walletRepository
                 .findByIdAndUserIdForUpdate(walletId, currentUser.getId())
@@ -171,12 +218,25 @@ public class WalletService {
         BigDecimal amount = BigDecimal.valueOf(request.getAmount());
 
         if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+            log.warn(
+                    "Withdrawal rejected: non-positive amount walletId={} userId={} amount={}",
+                    walletId,
+                    currentUser.getId(),
+                    amount
+            );
             throw new BadRequestException("Amount must be positive");
         }
 
         BigDecimal currentBalance = transactionEntryRepository.calculateBalance(walletId);
 
         if (currentBalance.compareTo(amount) < 0) {
+            log.warn(
+                    "Withdrawal rejected: insufficient funds walletId={} userId={} requested={} balance={}",
+                    walletId,
+                    currentUser.getId(),
+                    amount,
+                    currentBalance
+            );
             throw new InsufficientFundsException("Insufficient funds");
         }
 
@@ -201,6 +261,13 @@ public class WalletService {
                 .build();
 
         transactionEntryRepository.save(entry);
+        log.info(
+                "Withdrawal completed: walletId={} userId={} amount={} currency={}",
+                walletId,
+                currentUser.getId(),
+                amount,
+                wallet.getCurrency()
+        );
 
         return transactionMapper.toResponse(entry);
     }
